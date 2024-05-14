@@ -1,92 +1,138 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
+import { useEffect, useState } from "react";
+import { getAplications } from "./api-mock";
+import {
+  RouteObject,
+  RouterProvider,
+  createBrowserRouter,
+} from "react-router-dom";
 import {
   __federation_method_setRemote,
   __federation_method_getRemote,
 } from "virtual:__federation__";
 
-import { Suspense, lazy, useEffect, useState } from "react";
-import { Route, Routes } from "react-router-dom";
-
-const useMFEData = () => {
-  const [data, setData] = useState<any[] | null>(null);
-  const [loading, setLoading] = useState<any>(false);
-
-  useEffect(() => {
-    async function handleFetch() {
-      setLoading(true);
-      const response = await fetch(
-        "https://66290ba654afcabd0737f93b.mockapi.io/api/mfe"
-      );
-      if (response.ok) {
-        const data = await response.json();
-        // setPages(data);
-        setLoading(false);
-        console.log(data);
-        setData(data);
-      }
-    }
-    handleFetch();
-  }, []);
-
-  return { data, loading };
-};
-
-type RemoteAppProps = {
-  scope: string;
+// Function to import remote routes
+const importRemoteRoutes = async ({
+  name,
+  entrypoint,
+}: {
+  name: string;
   entrypoint: string;
-  page: string;
-};
-
-const RemoteApp = ({ scope, entrypoint, page }: RemoteAppProps) => {
-  __federation_method_setRemote(scope, {
+}) => {
+  __federation_method_setRemote(name, {
     url: () => Promise.resolve(entrypoint),
     format: "esm",
     from: "vite",
   });
 
-  return lazy(() => __federation_method_getRemote(scope, page));
+  return await __federation_method_getRemote(name, "/routes");
 };
 
-const Router = () => {
-  const { data } = useMFEData();
+// Define types
+type ResponseAplications = {
+  name: string;
+  entrypoint: string;
+};
 
-  const [mfeList, setMfeList] = useState<any>([]);
+type Application = {
+  name: string;
+  routes: RouteObject[];
+};
+
+enum ErrorType {
+  NotFound,
+  Error,
+}
+
+const NotFound = () => (
+  <div style={{ color: "red" }}>
+    <h2>404 - Page Not Found</h2>
+    <p>The requested page could not be found.</p>
+  </div>
+);
+
+const Error = () => (
+  <div style={{ color: "red" }}>
+    <h1>Error: Falha ao carregar aplicação</h1>
+  </div>
+);
+
+const Loading = () => (
+  <div style={{ color: "blue" }}>
+    <h1>Loading...</h1>
+  </div>
+);
+
+// Router component
+const Router = () => {
+  const [application, setApplication] = useState<Application | null>(null);
+  const [error, setError] = useState<ErrorType | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (!data?.length) return;
+    const fetchApplications = async () => {
+      try {
+        // Get list of remote applications
+        const remoteApplications =
+          (await getAplications()) as ResponseAplications[];
 
-    const components = data.map((mfe: any) =>
-      RemoteApp({
-        scope: mfe.scope,
-        entrypoint: mfe.entrypoint,
-        page: mfe.pages[0],
-      })
+          console.log(remoteApplications)
+
+        const currentPath = window.location.pathname;
+
+        // Find the matching application based on the current URL
+        const matchedApp = remoteApplications.find((app) =>
+          new RegExp(`/${app.name}\\b`).test(currentPath)
+        );
+
+        if (!matchedApp) {
+          setError(ErrorType.NotFound);
+          setLoading(false);
+          return;
+        }
+
+        // Import routes for the matched application
+        const routes = await importRemoteRoutes({
+          name: matchedApp.name,
+          entrypoint: matchedApp.entrypoint,
+        }).then(response => response.default);
+
+        console.log(routes)
+
+        // Set the application state
+        const app: Application = {
+          name: matchedApp.name,
+          routes,
+        };
+
+        setApplication(app);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching applications:", error);
+        setError(ErrorType.Error);
+        setLoading(false);
+      }
+    };
+
+    // Call fetchApplications on component mount
+    fetchApplications();
+  }, []);
+
+  // Render the RouterProvider with the application's routes
+  if (loading) return <Loading />;
+  if (error === ErrorType.NotFound) return <NotFound />;
+  if (error === ErrorType.Error) return <Error />;
+
+  if (application)
+    return (
+      <>
+      <RouterProvider
+      fallbackElement={<>FALLBACKKK</>}
+        router={createBrowserRouter([...application.routes], {
+          basename: `/${application.name}`,
+        })}
+      />
+      </>
     );
-
-    setMfeList(components);
-  }, [data]);
-
-  return (
-    <Suspense>
-      <Routes>
-        {mfeList?.length &&
-          mfeList.map((Component: any, index: any) => (
-            <Route
-              key={index}
-              path={`${data?.length && data[index].path}`}
-              element={
-                <>
-                  <Component />
-                </>
-              }
-            />
-          ))}
-        <Route path="*" element={<>Not found</>} />
-      </Routes>
-    </Suspense>
-  );
 };
 
 export default Router;

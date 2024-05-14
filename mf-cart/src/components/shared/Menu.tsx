@@ -8,7 +8,7 @@ const Menu = () => {
     <div className="py-4 bg-secondary">
       <div className="container flex justify-end">
         <Button asChild className="flex gap-2">
-          <Link to="/cart">Items: {products.length}</Link>
+          <Link to="/">Items: {products.length}</Link>
         </Button>
       </div>
     </div>

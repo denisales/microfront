@@ -1,18 +1,17 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Cart from "./pages/Cart.tsx";
-import "./index.css";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
+
+import routes from "./routes.tsx";
+
+
+const router = createBrowserRouter(routes);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-     <div>
-    <BrowserRouter basename="/">
-      <Routes>
-        <Route path="/cart" element={<Cart />} />
-      </Routes>
-    </BrowserRouter>
-    </div>
+
+     <RouterProvider router={router} />
+
   </React.StrictMode>
 );
