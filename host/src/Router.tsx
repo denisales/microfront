@@ -10,7 +10,43 @@ import {
   __federation_method_getRemote,
 } from "virtual:__federation__";
 
-// Function to import remote routes
+// Define tipos
+type ResponseAplication = {
+  name: string;
+  entrypoint: string;
+  path: string;
+};
+
+type Application = {
+  name: string;
+  path: string;
+  routes: RouteObject[];
+};
+
+enum ErrorType {
+  NotFound,
+  Error,
+}
+
+const NotFound = () => (
+  <div style={{ color: "red" }}>
+    <h2>404 - Página Não Encontrada</h2>
+    <p>A página solicitada não pôde ser encontrada.</p>
+  </div>
+);
+
+const ErrorComponent = () => (
+  <div style={{ color: "red" }}>
+    <h1>Erro: Falha ao carregar aplicação</h1>
+  </div>
+);
+
+const Loading = () => (
+  <div style={{ color: "blue" }}>
+    <h1>Carregando...</h1>
+  </div>
+);
+
 const importRemoteRoutes = async ({
   name,
   entrypoint,
@@ -27,61 +63,35 @@ const importRemoteRoutes = async ({
   return await __federation_method_getRemote(name, "/routes");
 };
 
-// Define types
-type ResponseAplications = {
-  name: string;
-  entrypoint: string;
-};
-
-type Application = {
-  name: string;
-  routes: RouteObject[];
-};
-
-enum ErrorType {
-  NotFound,
-  Error,
-}
-
-const NotFound = () => (
-  <div style={{ color: "red" }}>
-    <h2>404 - Page Not Found</h2>
-    <p>The requested page could not be found.</p>
-  </div>
-);
-
-const Error = () => (
-  <div style={{ color: "red" }}>
-    <h1>Error: Falha ao carregar aplicação</h1>
-  </div>
-);
-
-const Loading = () => (
-  <div style={{ color: "blue" }}>
-    <h1>Loading...</h1>
-  </div>
-);
-
-// Router component
 const Router = () => {
   const [application, setApplication] = useState<Application | null>(null);
   const [error, setError] = useState<ErrorType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [dataApps, setDataApps] = useState<ResponseAplication[] | null>([]);
 
   useEffect(() => {
     const fetchApplications = async () => {
       try {
-        // Get list of remote applications
         const remoteApplications =
-          (await getAplications()) as ResponseAplications[];
+        (await getAplications()) as ResponseAplication[];
 
-          console.log(remoteApplications)
+        setDataApps(remoteApplications);
+
+        console.log(remoteApplications)
+
+        const LOGIN_PATH = "/login";
+        const isLoggedIn = window.localStorage.getItem("ac-token");
+        if (!isLoggedIn && window.location.pathname !== LOGIN_PATH) {
+          return window.location.replace(LOGIN_PATH);
+        }
+        if (isLoggedIn && window.location.pathname === LOGIN_PATH) {
+          return window.location.replace('/');
+        }
+
 
         const currentPath = window.location.pathname;
-
-        // Find the matching application based on the current URL
         const matchedApp = remoteApplications.find((app) =>
-          new RegExp(`/${app.name}\\b`).test(currentPath)
+          new RegExp(`${app.path}\\b`).test(currentPath)
         );
 
         if (!matchedApp) {
@@ -90,49 +100,53 @@ const Router = () => {
           return;
         }
 
-        // Import routes for the matched application
-        const routes = await importRemoteRoutes({
-          name: matchedApp.name,
-          entrypoint: matchedApp.entrypoint,
-        }).then(response => response.default);
-
-        console.log(routes)
-
-        // Set the application state
+        const routes = await importRemoteRoutes(matchedApp);
         const app: Application = {
           name: matchedApp.name,
-          routes,
+          path: matchedApp.path,
+          routes: routes.default as RouteObject[],
         };
 
         setApplication(app);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching applications:", error);
+        console.error("Erro ao buscar aplicações:", error);
         setError(ErrorType.Error);
         setLoading(false);
       }
     };
 
-    // Call fetchApplications on component mount
     fetchApplications();
   }, []);
 
-  // Render the RouterProvider with the application's routes
   if (loading) return <Loading />;
-  if (error === ErrorType.NotFound) return <NotFound />;
-  if (error === ErrorType.Error) return <Error />;
-
-  if (application)
+  if (error === ErrorType.Error) return <ErrorComponent />;
+  if (error === ErrorType.NotFound)
     return (
-      <>
       <RouterProvider
-      fallbackElement={<>FALLBACKKK</>}
-        router={createBrowserRouter([...application.routes], {
-          basename: `/${application.name}`,
-        })}
+        router={createBrowserRouter([
+          { path: "*", element: <NotFound /> },
+          {
+            path: "/",
+            element: (
+              <>
+                <h1>HOST APP</h1>
+                {dataApps?.map((item) => <div key={item.name}><a href={item.path}>/{item.name}</a><br/></div>)}
+              </>
+            ),
+          },
+        ])}
       />
-      </>
     );
+
+  if (application) {
+    const { routes, path } = application;
+    return (
+      <RouterProvider
+        router={createBrowserRouter(routes, { basename: path })}
+      />
+    );
+  }
 };
 
 export default Router;

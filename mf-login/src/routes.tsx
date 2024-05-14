@@ -1,8 +1,7 @@
 // import { Route, Routes } from "react-router-dom"
 import { RouteObject } from "react-router-dom";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
 import Template from "./pages/Template";
+import Login from "./pages/Login";
 
 const routes = [
   {
@@ -11,11 +10,7 @@ const routes = [
     children: [
       {
         index: true,
-        element: <Cart />,
-      },
-      {
-        path: "/checkout",
-        element: <Checkout />,
+        element: <Login />,
       },
       {
         path: "*",

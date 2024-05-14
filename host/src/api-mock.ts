@@ -5,10 +5,17 @@ export const getAplications = () =>
         {
           name: "cart",
           entrypoint: "http://localhost:4173/assets/remoteEntry.js",
+          path: "/mfe-cart",
         },
         {
           name: "products",
           entrypoint: "http://localhost:4173/assets/remoteEntrys.js",
+          path: "/mfe-products",
+        },
+        {
+          name: "login",
+          entrypoint: "http://localhost:4174/assets/remoteEntry.js",
+          path: "/login",
         }
       ];
 

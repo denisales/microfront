@@ -30,7 +30,8 @@ const Cart = () => {
             <Card className="min-h-96">
               <CardHeader>
                 <CardTitle>Valor total: R$ {total}</CardTitle>
-                <Link to="/checkout">Checkout</Link>
+                <Link to="/checkout">/checkout</Link>
+                <a href="/mfe-products">/mfe products</a>
               </CardHeader>
             </Card>
           </div>
