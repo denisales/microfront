@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAplications } from "./api-mock";
+import {Button} from '@denis/ds'
 import {
   RouteObject,
   RouterProvider,
@@ -131,6 +132,7 @@ const Router = () => {
             element: (
               <>
                 <h1>HOST APP</h1>
+                <Button label="teste"/>
                 {dataApps?.map((item) => <div key={item.name}><a href={item.path}>/{item.name}</a><br/></div>)}
               </>
             ),
